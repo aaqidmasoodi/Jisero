@@ -218,6 +218,22 @@ class SocketHandlers {
       }
     });
 
+    // Delete chat
+    socket.on('delete-chat', async (data) => {
+      try {
+        const { chatId, recipientUserId, senderUserId } = data;
+        console.log(`🗑️ Deleting chat: ${chatId}`);
+        
+        // Notify the other user that the chat was deleted
+        const recipientSocket = connectedUsers.get(recipientUserId);
+        if (recipientSocket) {
+          recipientSocket.emit('chat-deleted', { chatId });
+        }
+      } catch (error) {
+        console.error('Delete chat error:', error);
+      }
+    });
+
     // Handle disconnection
     socket.on('disconnect', async () => {
       try {

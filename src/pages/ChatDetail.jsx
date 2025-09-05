@@ -1,10 +1,20 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [userPreferredLang, setUserPreferredLang] = useState('en');
   const [chatOnlineStatus, setChatOnlineStatus] = useState(chat?.isOnline || false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Load messages and user preferences
   useEffect(() => {
@@ -16,6 +26,9 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
       const chats = window.chatStorage.getChats();
       const currentChat = chats.find(c => c.id === chat.id);
       setChatOnlineStatus(currentChat?.isOnline || false);
+      
+      // Scroll to bottom immediately when entering chat
+      setTimeout(() => scrollToBottom(), 100);
     }
 
     // Get user's preferred language
@@ -199,6 +212,7 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
           ))
         )}
         {isTyping && <TypingIndicator />}
+        <div ref={messagesEndRef} />
       </div>
       
       <div className="p-2 bg-white border-t">

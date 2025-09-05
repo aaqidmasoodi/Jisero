@@ -16,6 +16,14 @@
             overscroll-behavior: none;
             touch-action: manipulation;
         }
+        /* Hide scrollbars */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
         .safe-area-top {
             padding-top: env(safe-area-inset-top);
         }

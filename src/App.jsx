@@ -245,9 +245,9 @@ function App() {
     }
 
     // Navigate away if currently viewing this chat
-    if (selectedChat && selectedChat.id === chat.id) {
+    if (currentChat && currentChat.id === chat.id) {
       setCurrentPage('chats');
-      setSelectedChat(null);
+      setCurrentChat(null);
     }
   };
 

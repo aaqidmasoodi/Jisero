@@ -376,6 +376,9 @@ class SocketService {
           senderUserId: senderUserId
         }
       });
+
+      // Trigger chat list update to show new/updated chat
+      window.dispatchEvent(new CustomEvent('chatListUpdate'));
       
     } catch (error) {
       console.error('Error handling incoming message:', error);
