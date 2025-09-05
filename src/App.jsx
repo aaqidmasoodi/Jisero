@@ -12,6 +12,18 @@ function App() {
   // Initialize user and load chats
   useEffect(() => {
     initializeUser();
+    
+    // Listen for custom chat list update events
+    const handleChatListUpdate = () => {
+      const updatedChats = window.chatStorage.getChats();
+      setChats([...updatedChats]);
+    };
+    
+    window.addEventListener('chatListUpdate', handleChatListUpdate);
+    
+    return () => {
+      window.removeEventListener('chatListUpdate', handleChatListUpdate);
+    };
   }, []);
 
   const initializeUser = async () => {
@@ -111,8 +123,11 @@ function App() {
         console.log('User came online:', userData.userId);
         if (window.chatStorage) {
           window.chatStorage.updateChatOnlineStatus(userData.userId, true);
-          // Refresh chats to show updated status
-          const updatedChats = window.chatStorage.getChats();
+          // Refresh chats with real-time online status check
+          const updatedChats = window.chatStorage.getChats().map(chat => ({
+            ...chat,
+            isOnline: window.socketService.isUserOnline(chat.userId)
+          }));
           setChats([...updatedChats]);
         }
       });
@@ -121,7 +136,34 @@ function App() {
         console.log('User went offline:', userData.userId);
         if (window.chatStorage) {
           window.chatStorage.updateChatOnlineStatus(userData.userId, false);
-          // Refresh chats to show updated status
+          // Refresh chats with real-time online status check
+          const updatedChats = window.chatStorage.getChats().map(chat => ({
+            ...chat,
+            isOnline: window.socketService.isUserOnline(chat.userId)
+          }));
+          setChats([...updatedChats]);
+        }
+      });
+
+      // Handle initial online users list
+      window.socketService.on('online-users', (users) => {
+        console.log('Received online users list:', users);
+        if (window.chatStorage) {
+          // First mark all users as offline
+          const allChats = window.chatStorage.getChats();
+          allChats.forEach(chat => {
+            window.chatStorage.updateChatOnlineStatus(chat.userId, false);
+          });
+          
+          // Then mark online users as online
+          users.forEach(user => {
+            const userId = user.userId || user.user_id;
+            if (userId) {
+              window.chatStorage.updateChatOnlineStatus(userId, true);
+            }
+          });
+          
+          // Refresh chats to show updated statuses
           const updatedChats = window.chatStorage.getChats();
           setChats([...updatedChats]);
         }
@@ -131,8 +173,11 @@ function App() {
       window.socketService.on('new-message', (data) => {
         console.log('New message received:', data);
         
-        // Update chats list
-        const updatedChats = window.chatStorage.getChats();
+        // Update chats list with fresh data and online status
+        const updatedChats = window.chatStorage.getChats().map(chat => ({
+          ...chat,
+          isOnline: window.socketService.isUserOnline(chat.userId)
+        }));
         setChats([...updatedChats]);
         
         // If we're in the chat, we might want to refresh messages
@@ -186,10 +231,35 @@ function App() {
     setShowNewChatModal(true);
   };
 
+  const handleDeleteChat = (chat) => {
+    // Delete locally
+    if (window.chatStorage) {
+      window.chatStorage.deleteChat(chat.id);
+      const updatedChats = window.chatStorage.getChats();
+      setChats([...updatedChats]);
+    }
+
+    // Notify server and other user
+    if (window.socketService) {
+      window.socketService.deleteChat(chat.id, chat.userId);
+    }
+
+    // Navigate away if currently viewing this chat
+    if (selectedChat && selectedChat.id === chat.id) {
+      setCurrentPage('chats');
+      setSelectedChat(null);
+    }
+  };
+
   const handleCreateChat = (newChat) => {
     // Refresh chats from storage to avoid duplicates
     const updatedChats = window.chatStorage.getChats();
     setChats([...updatedChats]);
+    
+    // Navigate to the new chat immediately
+    if (newChat) {
+      navigateToChat(newChat);
+    }
   };
 
   const handleChatSettings = () => {
@@ -204,6 +274,7 @@ function App() {
             chats={chats} 
             onChatSelect={navigateToChat}
             onNewChat={handleNewChat}
+            onDeleteChat={handleDeleteChat}
             currentUser={currentUser}
           />
         );
@@ -240,6 +311,7 @@ function App() {
             chats={chats} 
             onChatSelect={navigateToChat}
             onNewChat={handleNewChat}
+            onDeleteChat={handleDeleteChat}
             currentUser={currentUser}
           />
         );

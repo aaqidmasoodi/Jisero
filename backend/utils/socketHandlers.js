@@ -2,276 +2,278 @@ class SocketHandlers {
   constructor(translationService, database) {
     this.translationService = translationService;
     this.database = database;
-    this.connectedUsers = new Map(); // socketId -> userData
-    this.userSockets = new Map(); // userId -> socketId
-    this.messageQueue = new Map(); // userId -> messages[]
+    this.connectedUsers = new Map(); // userId -> socket mapping
+    this.userSockets = new Map(); // socketId -> userId mapping
   }
 
   handleConnection(socket) {
-    console.log('User connected:', socket.id);
+    console.log(`🔌 New connection: ${socket.id}`);
 
-    // Handle user joining with their data
+    // User join with error handling
     socket.on('user-join', async (userData) => {
-      console.log('User joined:', userData);
-      
       try {
-        // Update user online status in database
-        await this.database.updateUserOnlineStatus(userData.userId, true);
+        console.log(`👤 User joining:`, userData);
         
-        // Store user data
-        this.connectedUsers.set(socket.id, userData);
-        
-        if (userData.userId) {
-          // Map userId to socketId for direct messaging
-          this.userSockets.set(userData.userId, socket.id);
-          
-          // Broadcast to ALL other users that this user is online
-          socket.broadcast.emit('user-online', {
-            userId: userData.userId,
-            username: userData.username,
-            avatar: userData.avatar
-          });
-          
-          console.log(`Broadcasting ${userData.userId} is online to all users`);
-          
-          // Send list of currently online users to the new user
-          const onlineUsers = Array.from(this.connectedUsers.values())
-            .filter(user => user.userId && user.userId !== userData.userId);
-          socket.emit('online-users', onlineUsers);
-          
-          // Also send individual online events for each currently online user
-          onlineUsers.forEach(user => {
-            socket.emit('user-online', {
-              userId: user.userId,
-              username: user.username,
-              avatar: user.avatar
-            });
-          });
-          
-          // Process any queued messages for this user
-          this.processQueuedMessages(userData.userId, socket);
+        if (!userData || !userData.userId) {
+          socket.emit('error', { message: 'Invalid user data' });
+          return;
         }
+
+        const { userId, username, avatar } = userData;
         
-        socket.emit('user-joined', { success: true, socketId: socket.id });
+        // Store user connection
+        this.connectedUsers.set(userId, socket);
+        this.userSockets.set(socket.id, userId);
+        
+        // Update user online status in database
+        await this.database.updateUserOnlineStatus(userId, true);
+        
+        // Join user to their personal room
+        socket.join(userId);
+        
+        // Notify other users that this user is online
+        socket.broadcast.emit('user-online', { userId, username, avatar });
+        
+        // Send current online users to the new user
+        const onlineUsers = await this.database.getAllOnlineUsers();
+        socket.emit('online-users', onlineUsers);
+        
+        // Deliver any undelivered messages
+        await this.deliverPendingMessages(userId, socket);
+        
+        socket.emit('user-joined', { userId, status: 'connected' });
+        
       } catch (error) {
-        console.error('Error handling user join:', error);
-        socket.emit('user-join-error', { error: 'Failed to join' });
+        console.error('Error in user-join:', error);
+        socket.emit('error', { message: 'Failed to join user' });
       }
     });
 
-    // Handle user discovery
-    socket.on('find-user', async (userId) => {
-      console.log('Finding user:', userId);
-      
+    // Message sending with persistence and error handling
+    socket.on('send-message', async (data) => {
       try {
-        // Check database for user
+        console.log(`📤 Message received:`, data);
+        
+        if (!data || !data.message || !data.recipientUserId || !data.senderUserId) {
+          socket.emit('error', { message: 'Invalid message data' });
+          return;
+        }
+
+        const { chatId, message, recipientUserId, senderUserId, timestamp } = data;
+        const messageId = message.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        
+        // Find or create chat
+        const chat = await this.database.findOrCreateChat(senderUserId, recipientUserId);
+        const finalChatId = chatId || chat.chat_id;
+        
+        // Get recipient's preferred language for translation
+        const recipient = await this.database.findUser(recipientUserId);
+        const targetLang = recipient?.preferred_language || 'en';
+        
+        // Translate message if needed
+        let translatedText = message.text;
+        let originalText = message.text;
+        
+        try {
+          if (this.translationService && message.text.trim()) {
+            const result = await this.translationService.translate(message.text, targetLang);
+            translatedText = result.translatedText || message.text;
+          }
+        } catch (translationError) {
+          console.error('Translation failed:', translationError);
+          // Continue with original text if translation fails
+        }
+        
+        // Save message to database with deduplication
+        const savedMessage = await this.database.saveMessage({
+          messageId,
+          chatId: finalChatId,
+          senderUserId,
+          recipientUserId,
+          messageText: translatedText,
+          originalText,
+          translatedText
+        });
+        
+        if (!savedMessage.inserted) {
+          console.log(`Message ${messageId} already exists, skipping`);
+          return;
+        }
+        
+        // Send delivery confirmation to sender
+        socket.emit('message-delivered', { messageId, chatId: finalChatId });
+        
+        // Try to deliver to recipient if online
+        const recipientSocket = this.connectedUsers.get(recipientUserId);
+        if (recipientSocket) {
+          recipientSocket.emit('message-received', {
+            messageId,
+            chatId: finalChatId,
+            message: {
+              id: messageId,
+              text: translatedText,
+              originalText
+            },
+            senderUserId,
+            timestamp: timestamp || new Date().toISOString()
+          });
+          
+          // Update message status to delivered
+          await this.database.updateMessageStatus(messageId, 'delivered', new Date().toISOString());
+        } else {
+          // Recipient is offline, message will be delivered when they come online
+          console.log(`Recipient ${recipientUserId} is offline, message queued`);
+          await this.database.updateMessageStatus(messageId, 'queued');
+        }
+        
+      } catch (error) {
+        console.error('Error in send-message:', error);
+        socket.emit('error', { message: 'Failed to send message' });
+      }
+    });
+
+    // Message delivery confirmation
+    socket.on('message-delivered', async (data) => {
+      try {
+        const { messageId, chatId, recipientUserId } = data;
+        
+        if (messageId) {
+          await this.database.updateMessageStatus(messageId, 'delivered', new Date().toISOString());
+          
+          // Notify sender about delivery
+          const message = await this.database.db.get('SELECT sender_user_id FROM messages WHERE message_id = ?', [messageId]);
+          if (message) {
+            const senderSocket = this.connectedUsers.get(message.sender_user_id);
+            if (senderSocket) {
+              senderSocket.emit('message-delivered', { messageId, chatId });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error in message-delivered:', error);
+      }
+    });
+
+    // User discovery
+    socket.on('find-user', async (userId) => {
+      try {
+        console.log(`🔍 Finding user: ${userId}`);
+        
+        if (!userId) {
+          socket.emit('user-not-found', userId);
+          return;
+        }
+        
         const user = await this.database.findUser(userId);
         
         if (user) {
-          // Check if user is currently online
-          const isOnline = this.userSockets.has(userId);
-          
           socket.emit('user-found', {
             userId: user.user_id,
             username: user.username,
             avatar: user.avatar,
-            isOnline: isOnline
+            isOnline: this.connectedUsers.has(user.user_id)
           });
         } else {
           socket.emit('user-not-found', userId);
         }
       } catch (error) {
-        console.error('Error finding user:', error);
+        console.error('Error in find-user:', error);
         socket.emit('user-not-found', userId);
       }
     });
 
-    // Handle direct messages
-    socket.on('send-message', (data) => {
-      const { chatId, message, recipientUserId, senderUserId, timestamp } = data;
-      console.log(`Message from ${senderUserId} to ${recipientUserId}`);
-      
-      // Validate message has text
-      if (!message || !message.text || message.text.trim() === '') {
-        console.error('Invalid message - no text content');
-        return;
-      }
-      
-      const recipientSocketId = this.userSockets.get(recipientUserId);
-      
-      if (recipientSocketId) {
-        // Recipient is online, deliver immediately
-        const recipientSocket = socket.to(recipientSocketId);
-        recipientSocket.emit('message-received', {
-          chatId,
-          message: {
-            text: message.text,
-            id: message.id
-          },
-          senderUserId,
-          timestamp,
-          messageId: message.id || `msg_${Date.now()}`
-        });
-        
-        console.log(`Message delivered to online user ${recipientUserId}`);
-      } else {
-        // Recipient is offline, queue the message
-        console.log(`User ${recipientUserId} is offline, queuing message`);
-        this.queueMessage(recipientUserId, {
-          chatId,
-          message: {
-            text: message.text,
-            id: message.id
-          },
-          senderUserId,
-          timestamp,
-          messageId: message.id || `msg_${Date.now()}`
-        });
-      }
-    });
-
-    // Handle message delivery confirmation
-    socket.on('message-delivered', (data) => {
-      const { messageId, chatId, recipientUserId } = data;
-      console.log(`Message ${messageId} delivered to ${recipientUserId}`);
-      
-      // Find sender and notify them
-      const senderData = this.connectedUsers.get(socket.id);
-      if (senderData && senderData.userId) {
-        // Could notify sender that message was delivered
-        // For now, just log it
-      }
-    });
-
-    // Handle translation requests
+    // Translation requests
     socket.on('translate', async (data) => {
       try {
         const { text, targetLang, service } = data;
+        
+        if (!text || !targetLang) {
+          socket.emit('translation-error', { error: 'Missing text or target language' });
+          return;
+        }
+        
         const result = await this.translationService.translate(text, targetLang, service);
         socket.emit('translation-result', result);
       } catch (error) {
+        console.error('Translation error:', error);
         socket.emit('translation-error', { error: error.message });
       }
     });
 
-    // Handle language detection
+    // Language detection
     socket.on('detect-language', async (data) => {
       try {
         const { text, service } = data;
+        
+        if (!text) {
+          socket.emit('language-detection-error', { error: 'Missing text' });
+          return;
+        }
+        
         const language = await this.translationService.detectLanguage(text, service);
         socket.emit('language-detected', { language });
       } catch (error) {
+        console.error('Language detection error:', error);
         socket.emit('language-detection-error', { error: error.message });
-      }
-    });
-
-    // Handle typing indicators
-    socket.on('typing', (data) => {
-      const { recipientUserId, isTyping } = data;
-      const recipientSocketId = this.userSockets.get(recipientUserId);
-      
-      if (recipientSocketId) {
-        const senderData = this.connectedUsers.get(socket.id);
-        socket.to(recipientSocketId).emit('user-typing', {
-          userId: senderData?.userId,
-          isTyping,
-          timestamp: new Date().toISOString()
-        });
       }
     });
 
     // Handle disconnection
     socket.on('disconnect', async () => {
-      console.log('User disconnected:', socket.id);
-      
-      const userData = this.connectedUsers.get(socket.id);
-      
-      if (userData && userData.userId) {
-        try {
-          // Update user offline status in database
-          await this.database.updateUserOnlineStatus(userData.userId, false);
+      try {
+        console.log(`🔌 User disconnected: ${socket.id}`);
+        
+        const userId = this.userSockets.get(socket.id);
+        if (userId) {
+          // Update user offline status
+          await this.database.updateUserOnlineStatus(userId, false);
           
-          // Remove from user mapping
-          this.userSockets.delete(userData.userId);
+          // Remove from connected users
+          this.connectedUsers.delete(userId);
+          this.userSockets.delete(socket.id);
           
-          // Broadcast to ALL other users that this user went offline
-          socket.broadcast.emit('user-offline', {
-            userId: userData.userId,
-            username: userData.username,
-            avatar: userData.avatar
-          });
-          
-          console.log(`Broadcasting ${userData.userId} is offline to all users`);
-        } catch (error) {
-          console.error('Error handling user disconnect:', error);
+          // Notify other users that this user went offline
+          socket.broadcast.emit('user-offline', { userId });
         }
+      } catch (error) {
+        console.error('Error in disconnect:', error);
+      }
+    });
+
+    // Handle connection errors
+    socket.on('error', (error) => {
+      console.error(`Socket error for ${socket.id}:`, error);
+    });
+  }
+
+  // Deliver pending messages when user comes online
+  async deliverPendingMessages(userId, socket) {
+    try {
+      const undeliveredMessages = await this.database.getUndeliveredMessages(userId);
+      
+      for (const msg of undeliveredMessages) {
+        socket.emit('message-received', {
+          messageId: msg.message_id,
+          chatId: msg.chat_id,
+          message: {
+            id: msg.message_id,
+            text: msg.message_text,
+            originalText: msg.original_text
+          },
+          senderUserId: msg.sender_user_id,
+          timestamp: msg.created_at
+        });
+        
+        // Update message status to delivered
+        await this.database.updateMessageStatus(msg.message_id, 'delivered', new Date().toISOString());
       }
       
-      // Remove from connected users
-      this.connectedUsers.delete(socket.id);
-    });
-  }
-
-  // Queue message for offline user
-  queueMessage(userId, messageData) {
-    // Validate message data before queuing
-    if (!messageData.message || !messageData.message.text || messageData.message.text.trim() === '') {
-      console.error('Cannot queue message - invalid text content');
-      return;
-    }
-    
-    if (!this.messageQueue.has(userId)) {
-      this.messageQueue.set(userId, []);
-    }
-    
-    const queue = this.messageQueue.get(userId);
-    queue.push({
-      ...messageData,
-      queuedAt: new Date().toISOString()
-    });
-    
-    console.log(`Queued message for ${userId}: "${messageData.message.text}"`);
-    
-    // Limit queue size to prevent memory issues
-    if (queue.length > 100) {
-      queue.shift(); // Remove oldest message
-    }
-  }
-
-  // Process queued messages when user comes online
-  processQueuedMessages(userId, socket) {
-    const queuedMessages = this.messageQueue.get(userId);
-    
-    if (!queuedMessages || queuedMessages.length === 0) {
-      return;
-    }
-    
-    console.log(`Delivering ${queuedMessages.length} queued messages to ${userId}`);
-    
-    // Send all queued messages
-    queuedMessages.forEach(messageData => {
-      // Validate message before sending
-      if (messageData.message && messageData.message.text && messageData.message.text.trim() !== '') {
-        socket.emit('message-received', messageData);
-        console.log(`Delivered queued message: "${messageData.message.text}"`);
-      } else {
-        console.error('Skipping invalid queued message:', messageData);
+      if (undeliveredMessages.length > 0) {
+        console.log(`📬 Delivered ${undeliveredMessages.length} pending messages to ${userId}`);
       }
-    });
-    
-    // Clear the queue
-    this.messageQueue.delete(userId);
-  }
-
-  // Get online users count
-  getOnlineUsersCount() {
-    return this.connectedUsers.size;
-  }
-
-  // Get queued messages count for a user
-  getQueuedMessagesCount(userId) {
-    const queue = this.messageQueue.get(userId);
-    return queue ? queue.length : 0;
+    } catch (error) {
+      console.error('Error delivering pending messages:', error);
+    }
   }
 }
 

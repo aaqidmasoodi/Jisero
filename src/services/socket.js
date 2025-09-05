@@ -7,6 +7,10 @@ class SocketService {
     this.currentUser = null;
     this.onlineUsers = new Set();
     this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000;
+    this.messageBuffer = [];
   }
 
   connect(userData = {}) {
@@ -26,6 +30,7 @@ class SocketService {
       };
       script.onerror = () => {
         console.error('Failed to load Socket.IO script');
+        this.handleConnectionError('Failed to load Socket.IO');
       };
       document.head.appendChild(script);
     } else {
@@ -37,18 +42,30 @@ class SocketService {
     console.log('Initializing socket connection...');
     
     this.socket = io(this.serverURL, {
-      // Safari-specific options
       transports: ['websocket', 'polling'],
       upgrade: true,
       rememberUpgrade: true,
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionDelay: this.reconnectDelay
     });
 
+    this.setupEventHandlers(userData);
+  }
+
+  setupEventHandlers(userData) {
     this.socket.on('connect', () => {
       console.log(`✅ ${this.isSafari ? 'Safari' : 'Chrome'} connected to server:`, this.socket.id);
       this.connected = true;
+      this.reconnectAttempts = 0;
+      
+      // Join with user data
       this.socket.emit('user-join', userData);
+      
+      // Process any buffered messages
+      this.processBufferedMessages();
       
       // Process any queued messages
       if (window.messageQueue && userData.userId) {
@@ -58,12 +75,40 @@ class SocketService {
 
     this.socket.on('connect_error', (error) => {
       console.error(`❌ ${this.isSafari ? 'Safari' : 'Chrome'} connection error:`, error);
+      this.handleConnectionError(error);
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log(`🔌 ${this.isSafari ? 'Safari' : 'Chrome'} disconnected:`, reason);
       this.connected = false;
       this.onlineUsers.clear();
+      
+      // Attempt reconnection if not intentional
+      if (reason !== 'io client disconnect') {
+        this.attemptReconnection(userData);
+      }
+    });
+
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log(`🔄 Reconnected after ${attemptNumber} attempts`);
+      this.connected = true;
+      this.reconnectAttempts = 0;
+    });
+
+    this.socket.on('reconnect_error', (error) => {
+      console.error(`🔄❌ Reconnection failed:`, error);
+      this.reconnectAttempts++;
+    });
+
+    this.socket.on('reconnect_failed', () => {
+      console.error('🔄❌ All reconnection attempts failed');
+      this.handleConnectionError('Reconnection failed');
+    });
+
+    // Error handling
+    this.socket.on('error', (error) => {
+      console.error(`Socket error:`, error);
+      this.emit('error', error);
     });
 
     // User discovery events
@@ -95,13 +140,14 @@ class SocketService {
     });
 
     this.socket.on('online-users', (users) => {
-      this.onlineUsers = new Set(users.map(u => u.userId));
+      this.onlineUsers = new Set(users.map(u => u.userId || u.user_id));
       console.log(`📋 ${this.isSafari ? 'Safari' : 'Chrome'} - Online users:`, Array.from(this.onlineUsers));
       
       // Update all chat statuses
       if (window.chatStorage) {
         users.forEach(user => {
-          window.chatStorage.updateChatOnlineStatus(user.userId, true);
+          const userId = user.userId || user.user_id;
+          window.chatStorage.updateChatOnlineStatus(userId, true);
         });
       }
     });
@@ -110,17 +156,14 @@ class SocketService {
       console.log(`✅ ${this.isSafari ? 'Safari' : 'Chrome'} - User joined successfully:`, data);
     });
 
-    // Message events
+    // Message events with error handling
     this.socket.on('message-received', async (data) => {
-      console.log(`📨 ${this.isSafari ? 'Safari' : 'Chrome'} - Message received:`, data);
-      console.log('Message structure:', {
-        chatId: data.chatId,
-        message: data.message,
-        messageText: data.message?.text,
-        senderUserId: data.senderUserId,
-        timestamp: data.timestamp
-      });
-      await this.handleIncomingMessage(data);
+      try {
+        console.log(`📨 ${this.isSafari ? 'Safari' : 'Chrome'} - Message received:`, data);
+        await this.handleIncomingMessage(data);
+      } catch (error) {
+        console.error('Error handling incoming message:', error);
+      }
     });
 
     this.socket.on('message-delivered', (data) => {
@@ -140,20 +183,49 @@ class SocketService {
       this.emit('user-not-found', userId);
     });
 
-    // Set up event handlers
+    this.socket.on('chat-deleted', (data) => {
+      console.log(`🗑️ Chat deleted:`, data.chatId);
+      if (window.chatStorage) {
+        window.chatStorage.deleteChat(data.chatId);
+        window.dispatchEvent(new CustomEvent('chatListUpdate'));
+      }
+    });
+
+    // Set up custom event handlers
     this.eventHandlers.forEach((handler, event) => {
       this.socket.on(event, handler);
     });
+  }
 
-    // Safari-specific: Force connection check
-    if (this.isSafari) {
+  handleConnectionError(error) {
+    console.error('Connection error:', error);
+    this.emit('connection-error', error);
+  }
+
+  attemptReconnection(userData) {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+      console.log(`🔄 Attempting reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1})`);
+      
       setTimeout(() => {
-        if (!this.connected) {
-          console.warn('Safari connection timeout, retrying...');
-          this.socket.disconnect();
-          this.initializeSocket(userData);
-        }
-      }, 5000);
+        this.reconnectAttempts++;
+        this.initializeSocket(userData);
+      }, delay);
+    } else {
+      console.error('Max reconnection attempts reached');
+      this.handleConnectionError('Max reconnection attempts reached');
+    }
+  }
+
+  processBufferedMessages() {
+    if (this.messageBuffer.length > 0) {
+      console.log(`📤 Processing ${this.messageBuffer.length} buffered messages`);
+      
+      this.messageBuffer.forEach(messageData => {
+        this.socket.emit('send-message', messageData);
+      });
+      
+      this.messageBuffer = [];
     }
   }
 
@@ -174,6 +246,7 @@ class SocketService {
       this.socket.emit('find-user', userId);
     } else {
       console.error('Cannot find user - not connected to server');
+      this.emit('user-not-found', userId);
     }
   }
 
@@ -184,13 +257,8 @@ class SocketService {
     return isOnline;
   }
 
-  // Send message
+  // Send message with buffering for offline scenarios
   sendMessage(chatId, message, recipientUserId) {
-    if (!this.connected) {
-      console.error('Not connected to server');
-      return false;
-    }
-
     const messageData = {
       chatId,
       message,
@@ -200,6 +268,12 @@ class SocketService {
     };
 
     console.log(`📤 ${this.isSafari ? 'Safari' : 'Chrome'} - Sending message to ${recipientUserId}`);
+
+    if (!this.connected) {
+      console.log('Not connected, buffering message');
+      this.messageBuffer.push(messageData);
+      return false;
+    }
 
     // Check if recipient is online
     if (this.isUserOnline(recipientUserId)) {
@@ -215,6 +289,9 @@ class SocketService {
           id: message.id
         });
       }
+      
+      // Still send to server for persistence
+      this.socket.emit('send-message', messageData);
       
       // Still show as sent in UI, but mark as queued
       if (window.chatStorage) {
@@ -236,21 +313,24 @@ class SocketService {
         return;
       }
       
-      // Get user's preferred language
+      // Get user's preferred language and translation setting
       const preferredLang = localStorage.getItem('user_preferred_language') || 'en';
+      const chatTranslationEnabled = localStorage.getItem('chat_translation_enabled') === 'true';
       
-      // Auto-translate the incoming message
+      // Auto-translate the incoming message (only if enabled)
       let translatedText = message.text;
-      try {
-        if (window.translationManager && message.text.trim() !== '') {
-          const result = await window.translationManager.translate(message.text, preferredLang);
-          translatedText = result.translatedText || message.text;
-          console.log(`Auto-translated "${message.text}" to "${translatedText}"`);
+      if (chatTranslationEnabled) {
+        try {
+          if (window.translationManager && message.text.trim() !== '') {
+            const result = await window.translationManager.translate(message.text, preferredLang);
+            translatedText = result.translatedText || message.text;
+            console.log(`Auto-translated "${message.text}" to "${translatedText}"`);
+          }
+        } catch (error) {
+          console.error('Auto-translation failed:', error);
+          // Continue with original text if translation fails
+          translatedText = message.text;
         }
-      } catch (error) {
-        console.error('Auto-translation failed:', error);
-        // Continue with original text if translation fails
-        translatedText = message.text;
       }
       
       // Find or create chat
@@ -276,11 +356,13 @@ class SocketService {
         });
         
         // Send delivery confirmation
-        this.socket.emit('message-delivered', {
-          messageId: data.messageId,
-          chatId: chat.id,
-          recipientUserId: this.currentUser?.userId
-        });
+        if (this.connected) {
+          this.socket.emit('message-delivered', {
+            messageId: data.messageId,
+            chatId: chat.id,
+            recipientUserId: this.currentUser?.userId
+          });
+        }
       }
       
       // Emit event for UI updates
@@ -298,6 +380,23 @@ class SocketService {
     } catch (error) {
       console.error('Error handling incoming message:', error);
     }
+  }
+
+  // Delete chat
+  deleteChat(chatId, recipientUserId) {
+    if (!this.connected) {
+      console.log('Not connected, cannot delete chat');
+      return false;
+    }
+
+    const deleteData = {
+      chatId,
+      recipientUserId,
+      senderUserId: this.currentUser?.userId
+    };
+
+    this.socket.emit('delete-chat', deleteData);
+    return true;
   }
 
   // Translation methods (keeping existing functionality)

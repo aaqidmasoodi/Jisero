@@ -100,6 +100,9 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
       // Refresh messages to show updated status
       const finalMessages = window.chatStorage.getMessages(chat.id);
       setMessages([...finalMessages]);
+      
+      // Trigger chat list update in parent component by emitting custom event
+      window.dispatchEvent(new CustomEvent('chatListUpdate'));
     } else {
       // Mark as failed if not connected
       window.chatStorage.updateMessageStatus(chat.id, savedMessage.id, 'failed');

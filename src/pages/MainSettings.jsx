@@ -7,6 +7,7 @@ function MainSettings({ isConnected, currentUser, onUserUpdate }) {
     avatar: 'U'
   });
   const [preferredLanguage, setPreferredLanguage] = useState('en');
+  const [chatTranslationEnabled, setChatTranslationEnabled] = useState(false);
 
   const languages = [
     { code: 'en', name: 'English' },
@@ -31,6 +32,10 @@ function MainSettings({ isConnected, currentUser, onUserUpdate }) {
     // Load preferred language
     const savedLang = localStorage.getItem('user_preferred_language') || 'en';
     setPreferredLanguage(savedLang);
+    
+    // Load chat translation setting (default: false)
+    const savedTranslation = localStorage.getItem('chat_translation_enabled') === 'true';
+    setChatTranslationEnabled(savedTranslation);
   }, [currentUser]);
 
   const updateUsername = (username) => {
@@ -43,6 +48,11 @@ function MainSettings({ isConnected, currentUser, onUserUpdate }) {
   const updatePreferredLanguage = (langCode) => {
     setPreferredLanguage(langCode);
     localStorage.setItem('user_preferred_language', langCode);
+  };
+
+  const toggleChatTranslation = (enabled) => {
+    setChatTranslationEnabled(enabled);
+    localStorage.setItem('chat_translation_enabled', enabled.toString());
   };
 
   const copyUserId = () => {
@@ -138,11 +148,16 @@ function MainSettings({ isConnected, currentUser, onUserUpdate }) {
             <h3 className="text-lg font-semibold mb-4">App Settings</h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between">
-                <span className="text-sm">Enable notifications</span>
-                <input type="checkbox" defaultChecked className="ml-2" />
+                <span className="text-sm">Enable chat translation</span>
+                <input 
+                  type="checkbox" 
+                  checked={chatTranslationEnabled}
+                  onChange={(e) => toggleChatTranslation(e.target.checked)}
+                  className="ml-2" 
+                />
               </label>
               <label className="flex items-center justify-between">
-                <span className="text-sm">Auto-translate incoming messages</span>
+                <span className="text-sm">Enable notifications</span>
                 <input type="checkbox" defaultChecked className="ml-2" />
               </label>
               <label className="flex items-center justify-between">

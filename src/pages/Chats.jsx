@@ -1,4 +1,11 @@
-function Chats({ chats, onChatSelect, onNewChat }) {
+function Chats({ chats, onChatSelect, onNewChat, onDeleteChat }) {
+  const handleDeleteChat = (e, chat) => {
+    e.stopPropagation();
+    if (confirm(`Delete chat with ${chat.name}? This cannot be undone.`)) {
+      onDeleteChat(chat);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <Header 
@@ -38,7 +45,16 @@ function Chats({ chats, onChatSelect, onNewChat }) {
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <h3 className="font-semibold text-gray-900">{chat.name}</h3>
-                  <span className="text-xs text-gray-500">{chat.timestamp}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">{chat.timestamp}</span>
+                    <button
+                      onClick={(e) => handleDeleteChat(e, chat)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Delete chat"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-600 truncate flex-1">{chat.lastMessage || 'No messages yet'}</p>

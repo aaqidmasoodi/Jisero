@@ -20,9 +20,21 @@ const io = socketIo(server, {
   }
 });
 
+// Basic logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(`${new Date().toISOString()} - Error:`, err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('../')); // Serve frontend files
 
 // Initialize database
@@ -40,13 +52,17 @@ const socketHandlers = new SocketHandlers(translationService, database);
 // Routes
 app.use('/api', createTranslationRoutes(translationController));
 
-// User registration endpoint
+// User registration endpoint with validation
 app.post('/api/register', async (req, res) => {
   try {
     const { username, preferredLanguage = 'en' } = req.body;
     
-    if (!username) {
+    if (!username || username.trim().length === 0) {
       return res.status(400).json({ error: 'Username is required' });
+    }
+
+    if (username.length > 50) {
+      return res.status(400).json({ error: 'Username too long' });
     }
 
     // Generate unique user ID
@@ -55,20 +71,27 @@ app.post('/api/register', async (req, res) => {
 
     const user = await database.createUser({
       userId,
-      username,
+      username: username.trim(),
       avatar,
       preferredLanguage
     });
 
+    console.log(`✅ User registered: ${userId} (${username})`);
+
     res.json({
       userId,
-      username,
+      username: username.trim(),
       avatar,
       preferredLanguage
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'User already exists' });
+    } else {
+      res.status(500).json({ error: 'Registration failed' });
+    }
   }
 });
 
@@ -76,6 +99,11 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
     const user = await database.findUser(userId);
     
     if (user) {
@@ -97,12 +125,35 @@ app.get('/api/user/:userId', async (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
 });
 
-// Socket.IO connection handling
+// Socket.IO connection handling with error handling
 io.on('connection', (socket) => {
-  socketHandlers.handleConnection(socket);
+  try {
+    socketHandlers.handleConnection(socket);
+  } catch (error) {
+    console.error('Socket connection error:', error);
+    socket.emit('error', { message: 'Connection failed' });
+  }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't exit in development, but log the error
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 const PORT = process.env.PORT || 3000;
@@ -112,11 +163,24 @@ server.listen(PORT, () => {
   console.log(`📡 Socket.IO server ready`);
   console.log(`🗄️  SQLite database initialized`);
   console.log(`🌐 Frontend served from: http://localhost:${PORT}`);
+  console.log(`💾 Memory usage:`, process.memoryUsage());
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+let isShuttingDown = false;
+
+const gracefulShutdown = () => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  
   console.log('Shutting down server...');
   database.close();
-  process.exit(0);
-});
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+};
+
+process.on('SIGINT', gracefulShutdown);
+
+process.on('SIGTERM', gracefulShutdown);
