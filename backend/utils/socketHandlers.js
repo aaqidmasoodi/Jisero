@@ -85,18 +85,26 @@ class SocketHandlers {
         }
         
         // Save message to database with deduplication
-        const savedMessage = await this.database.saveMessage({
-          messageId,
-          chatId: finalChatId,
-          senderUserId,
-          recipientUserId,
-          messageText: translatedText,
-          originalText,
-          translatedText
-        });
-        
-        if (!savedMessage.inserted) {
-          console.log(`Message ${messageId} already exists, skipping`);
+        console.log(`💾 Saving message to database: ${messageId}`);
+        try {
+          const savedMessage = await this.database.saveMessage({
+            messageId,
+            chatId: finalChatId,
+            senderUserId,
+            recipientUserId,
+            messageText: translatedText,
+            originalText,
+            translatedText
+          });
+          
+          console.log(`💾 Message saved result:`, savedMessage);
+          
+          if (!savedMessage.inserted) {
+            console.log(`Message ${messageId} already exists, skipping`);
+            return;
+          }
+        } catch (error) {
+          console.error(`❌ Error saving message ${messageId}:`, error);
           return;
         }
         
@@ -151,6 +159,45 @@ class SocketHandlers {
         }
       } catch (error) {
         console.error('Error in message-delivered:', error);
+      }
+    });
+
+    // Message seen confirmation
+    socket.on('message-seen', async (data) => {
+      try {
+        const { messageId, chatId, recipientUserId } = data;
+        console.log(`👁️ Message seen confirmation: ${messageId} from recipient: ${recipientUserId}`);
+        
+        if (messageId) {
+          // First, let's check if the message exists with proper promise handling
+          try {
+            const checkMessage = await new Promise((resolve, reject) => {
+              this.database.db.get('SELECT * FROM messages WHERE message_id = ?', [messageId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+              });
+            });
+            console.log(`👁️ Full message data:`, checkMessage);
+            
+            if (checkMessage) {
+              await this.database.updateMessageStatus(messageId, 'seen', new Date().toISOString());
+              
+              const senderSocket = this.connectedUsers.get(checkMessage.sender_user_id);
+              if (senderSocket) {
+                console.log(`👁️ Forwarding message-seen to sender: ${checkMessage.sender_user_id}`);
+                senderSocket.emit('message-seen', { messageId, chatId });
+              } else {
+                console.log(`❌ Sender ${checkMessage.sender_user_id} not found in connected users`);
+              }
+            } else {
+              console.log(`❌ Message ${messageId} not found in database`);
+            }
+          } catch (dbError) {
+            console.error(`❌ Database query error:`, dbError);
+          }
+        }
+      } catch (error) {
+        console.error('Error in message-seen:', error);
       }
     });
 

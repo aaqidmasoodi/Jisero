@@ -164,6 +164,23 @@ function MainSettings({ isConnected, currentUser, onUserUpdate }) {
                 <span className="text-sm">Save chat history</span>
                 <input type="checkbox" defaultChecked className="ml-2" />
               </label>
+              
+              <div className="border-t pt-3 mt-4">
+                <button
+                  onClick={() => {
+                    if (confirm('Clear all chats and data? This cannot be undone.')) {
+                      localStorage.clear();
+                      window.location.reload();
+                    }
+                  }}
+                  className="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 text-sm"
+                >
+                  Clear All Data
+                </button>
+                <p className="text-xs text-gray-500 mt-1 text-center">
+                  This will delete all chats, messages, and settings
+                </p>
+              </div>
             </div>
           </div>
 

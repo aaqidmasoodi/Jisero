@@ -173,6 +173,17 @@ class SocketService {
       }
     });
 
+    this.socket.on('message-seen', (data) => {
+      console.log(`👁️ ${this.isSafari ? 'Safari' : 'Chrome'} - Message seen received from server:`, data);
+      if (window.chatStorage) {
+        console.log(`👁️ Updating message ${data.messageId} status to seen in storage`);
+        window.chatStorage.updateMessageStatus(data.chatId, data.messageId, 'seen');
+      }
+      // Emit to ChatDetail component
+      console.log(`👁️ Emitting message-seen event to ChatDetail component`);
+      this.emit('message-seen', data);
+    });
+
     this.socket.on('user-found', (userData) => {
       console.log(`🔍 ${this.isSafari ? 'Safari' : 'Chrome'} - User found:`, userData);
       this.emit('user-found', userData);
@@ -335,6 +346,8 @@ class SocketService {
       
       // Find or create chat
       let chat = null;
+      let savedMessage = null;
+      
       if (window.chatStorage) {
         const chats = window.chatStorage.getChats();
         chat = chats.find(c => c.userId === senderUserId);
@@ -347,12 +360,14 @@ class SocketService {
         // Save the message with translation - ensure we have valid text
         const messageText = translatedText && translatedText.trim() !== '' ? translatedText : message.text;
         
-        const savedMessage = window.chatStorage.saveMessage(chat.id, {
+        savedMessage = window.chatStorage.saveMessage(chat.id, {
+          id: data.messageId, // Use the original message ID from backend
           text: messageText, // Save the translated text as the main text
           originalText: message.text, // Keep original for reference
           isOwn: false,
           timestamp: timestamp,
-          senderUserId: senderUserId
+          senderUserId: senderUserId,
+          status: 'delivered' // Set initial status for incoming messages
         });
         
         // Send delivery confirmation
@@ -369,6 +384,7 @@ class SocketService {
       this.emit('new-message', {
         chat,
         message: {
+          id: savedMessage?.id || data.messageId,
           text: translatedText && translatedText.trim() !== '' ? translatedText : message.text,
           originalText: message.text,
           isOwn: false,

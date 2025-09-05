@@ -75,8 +75,21 @@ class ChatStorageService {
       }
 
       // Create new chat only if it doesn't exist
+      // Create deterministic chat ID that's the same for both users
+      const currentUserId = localStorage.getItem('user_id') || window.socketService?.currentUser?.userId;
+      
+      if (!currentUserId) {
+        console.error('Cannot create chat: current user ID not found');
+        return null;
+      }
+      
+      const userIds = [currentUserId, userId].sort(); // Sort to ensure consistent order
+      const chatId = `chat_${userIds[0]}_${userIds[1]}`;
+      
+      console.log(`Creating chat with ID: ${chatId} for users: ${currentUserId} and ${userId}`);
+      
       const newChat = {
-        id: `chat_${userId}_${Date.now()}`, // Include userId in chat ID for uniqueness
+        id: chatId,
         userId: userId,
         name: userName || `User ${userId.substring(0, 8)}`,
         avatar: userId.substring(0, 2).toUpperCase(),
@@ -235,8 +248,11 @@ class ChatStorageService {
   updateMessageStatus(chatId, messageId, status) {
     try {
       if (!chatId || !messageId || !status) {
+        console.log(`updateMessageStatus failed: chatId=${chatId}, messageId=${messageId}, status=${status}`);
         return;
       }
+
+      console.log(`Updating message ${messageId} in chat ${chatId} to status: ${status}`);
 
       const allMessages = localStorage.getItem(this.messagesKey);
       const messages = allMessages ? JSON.parse(allMessages) : {};
@@ -244,9 +260,15 @@ class ChatStorageService {
       if (messages[chatId]) {
         const messageIndex = messages[chatId].findIndex(msg => msg.id === messageId);
         if (messageIndex !== -1) {
+          console.log(`Found message at index ${messageIndex}, updating status from ${messages[chatId][messageIndex].status} to ${status}`);
           messages[chatId][messageIndex].status = status;
           localStorage.setItem(this.messagesKey, JSON.stringify(messages));
+          console.log(`Message status updated successfully`);
+        } else {
+          console.log(`Message ${messageId} not found in chat ${chatId}`);
         }
+      } else {
+        console.log(`Chat ${chatId} not found in messages`);
       }
     } catch (error) {
       console.error('Error updating message status:', error);

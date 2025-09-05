@@ -27,6 +27,24 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
       const currentChat = chats.find(c => c.id === chat.id);
       setChatOnlineStatus(currentChat?.isOnline || false);
       
+      // Mark all received messages as seen
+      chatMessages.forEach(message => {
+        if (!message.isOwn && (!message.status || message.status !== 'seen')) {
+          console.log(`Marking message ${message.id} as seen (current status: ${message.status})`);
+          console.log(`Message details:`, message);
+          window.chatStorage.updateMessageStatus(chat.id, message.id, 'seen');
+          // Send seen confirmation to backend (like delivered confirmation)
+          if (window.socketService && window.socketService.connected) {
+            console.log(`Sending message-seen confirmation to backend for ${message.id}`);
+            window.socketService.socket.emit('message-seen', {
+              messageId: message.id,
+              chatId: chat.id,
+              recipientUserId: window.socketService.currentUser?.userId
+            });
+          }
+        }
+      });
+      
       // Scroll to bottom immediately when entering chat
       setTimeout(() => scrollToBottom(), 100);
     }
@@ -46,6 +64,52 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
           // Reload messages from storage
           const updatedMessages = window.chatStorage.getMessages(chat.id);
           setMessages([...updatedMessages]);
+          
+          // If we're actively viewing this chat, immediately mark new message as seen
+          if (data.message && !data.message.isOwn) {
+            console.log(`Auto-marking new message as seen (user is viewing chat)`);
+            setTimeout(() => {
+              window.chatStorage.updateMessageStatus(chat.id, data.message.id, 'seen');
+              if (window.socketService && window.socketService.connected) {
+                window.socketService.socket.emit('message-seen', {
+                  messageId: data.message.id,
+                  chatId: chat.id,
+                  senderUserId: chat.userId
+                });
+              }
+              // Refresh messages to show seen status
+              const finalMessages = window.chatStorage.getMessages(chat.id);
+              setMessages([...finalMessages]);
+            }, 100);
+          }
+        }
+      };
+
+      // Real-time message status updates
+      const handleMessageDelivered = (data) => {
+        if (data.chatId === chat.id) {
+          window.chatStorage.updateMessageStatus(chat.id, data.messageId, 'delivered');
+          const updatedMessages = window.chatStorage.getMessages(chat.id);
+          setMessages([...updatedMessages]);
+        }
+      };
+
+      const handleMessageSeen = (data) => {
+        console.log(`Received message-seen event:`, data);
+        console.log(`Current chat ID: ${chat.id}, Event chat ID: ${data.chatId}`);
+        if (data.chatId === chat.id) {
+          console.log(`Updating message ${data.messageId} to seen status`);
+          window.chatStorage.updateMessageStatus(chat.id, data.messageId, 'seen');
+          
+          // Force immediate re-render by getting fresh messages
+          setTimeout(() => {
+            const updatedMessages = window.chatStorage.getMessages(chat.id);
+            console.log(`Refreshing messages, found ${updatedMessages.length} messages`);
+            console.log(`Updated messages:`, updatedMessages.map(m => ({id: m.id, status: m.status})));
+            setMessages([...updatedMessages]);
+          }, 100);
+        } else {
+          console.log(`Chat ID mismatch - ignoring seen event`);
         }
       };
 
@@ -65,6 +129,8 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
       };
 
       window.socketService.on('new-message', handleNewMessage);
+      window.socketService.on('message-delivered', handleMessageDelivered);
+      window.socketService.on('message-seen', handleMessageSeen);
       window.socketService.on('user-online', handleUserOnline);
       window.socketService.on('user-offline', handleUserOffline);
 
@@ -74,6 +140,8 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
 
       return () => {
         window.socketService.off('new-message');
+        window.socketService.off('message-delivered');
+        window.socketService.off('message-seen');
         window.socketService.off('user-online');  
         window.socketService.off('user-offline');
       };
@@ -168,11 +236,31 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
     switch (message.status) {
       case 'sending': return '⏳';
       case 'sent': return '✓';
-      case 'delivered': return '✓✓';
+      case 'delivered': 
+      case 'seen': return '✓✓'; // Always show double tick for delivered/seen
       case 'queued': return '⏰';
       case 'failed': return '❌';
       default: return null;
     }
+  };
+
+  // Get the status text to show under the last message (iMessage style)
+  const getLastMessageStatusText = () => {
+    if (messages.length === 0) return null;
+    
+    // Get the very last message in the conversation (from anyone)
+    const lastMessage = messages[messages.length - 1];
+    
+    // Only show status if the last message is from current user (isOwn: true)
+    if (!lastMessage.isOwn) return null;
+    
+    if (lastMessage.status === 'seen') {
+      return 'Read';
+    } else if (lastMessage.status === 'delivered') {
+      return 'Delivered';
+    }
+    
+    return null;
   };
 
   if (!chat) {
@@ -200,16 +288,27 @@ function ChatDetail({ chat, onBack, onChatSettings, isConnected, currentUser }) 
             </p>
           </div>
         ) : (
-          messages.map(message => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={message.isOwn}
-              showTranslation={false}
-              onTranslate={handleTranslate}
-              status={getMessageStatus(message)}
-            />
-          ))
+          <>
+            {messages.map(message => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isOwn={message.isOwn}
+                showTranslation={false}
+                onTranslate={handleTranslate}
+                status={getMessageStatus(message)}
+              />
+            ))}
+            
+            {/* iMessage-style status text under last message */}
+            {getLastMessageStatusText() && (
+              <div className="flex justify-end mb-2">
+                <div className="text-xs text-gray-500 mr-4">
+                  {getLastMessageStatusText()}
+                </div>
+              </div>
+            )}
+          </>
         )}
         {isTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />
