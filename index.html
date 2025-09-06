@@ -1,103 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Jisero - Translation Chat</title>
-    <meta name="theme-color" content="#007AFF">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            overscroll-behavior: none;
-            touch-action: manipulation;
-        }
-        /* Hide scrollbars */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-        * {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .safe-area-top {
-            padding-top: env(safe-area-inset-top);
-        }
-        .safe-area-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        .message-bubble {
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-        .typing-indicator {
-            width: 60px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-        }
-        .typing-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #999;
-            animation: typing 1.4s infinite ease-in-out;
-        }
-        .typing-dot:nth-child(1) { animation-delay: 0s; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-5px); }
-        }
-        .bounce-in {
-            animation: bounceIn 0.3s ease-out;
-        }
-        @keyframes bounceIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            70% { transform: scale(1.05); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .slide-up {
-            animation: slideUp 0.3s ease-out;
-        }
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jisero</title>
+  <!-- React via CDN (Production) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Tailwind CSS with Dark Mode Support -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load Tailwind Config -->
+  <script src="./tailwind.config.js"></script>
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="./styles/global.css">
 </head>
-<body class="bg-gray-50 h-screen overflow-hidden">
-    <div id="app" class="h-full flex flex-col"></div>
-    
-    <!-- Load services first -->
-    <script type="text/babel" src="src/services/api.js"></script>
-    <script type="text/babel" src="src/services/chatStorage.js"></script>
-    <script type="text/babel" src="src/services/messageQueue.js"></script>
-    <script type="text/babel" src="src/services/socket.js"></script>
-    <script type="text/babel" src="src/utils/translations.js"></script>
-    
-    <!-- Load components -->
-    <script type="text/babel" src="src/components/Chat/MessageBubble.jsx"></script>
-    <script type="text/babel" src="src/components/Chat/InputArea.jsx"></script>
-    <script type="text/babel" src="src/components/Chat/TypingIndicator.jsx"></script>
-    <script type="text/babel" src="src/components/Navigation/Header.jsx"></script>
-    <script type="text/babel" src="src/components/Navigation/TabBar.jsx"></script>
-    <script type="text/babel" src="src/components/Modals/NewChatModal.jsx"></script>
-    
-    <!-- Load pages -->
-    <script type="text/babel" src="src/pages/Chats.jsx"></script>
-    <script type="text/babel" src="src/pages/ChatDetail.jsx"></script>
-    <script type="text/babel" src="src/pages/ChatSettings.jsx"></script>
-    <script type="text/babel" src="src/pages/MainSettings.jsx"></script>
-    
-    <!-- Load main app -->
-    <script type="text/babel" src="src/App.jsx"></script>
-    <script type="text/babel" src="src/main.jsx"></script>
+<body class="bg-white text-black transition-colors duration-300">
+  <div id="root"></div>
+  
+  <!-- Load data and utilities first -->
+  <script src="./data/fakeData.js" type="text/babel"></script>
+  <script src="./utils/commonEmojis.js" type="text/babel"></script>
+  
+  <!-- Load components in dependency order -->
+  <script src="./components/Toast.js" type="text/babel"></script>
+  <script src="./components/TypingIndicator.js" type="text/babel"></script>
+  <script src="./components/Message.js" type="text/babel"></script>
+  <script src="./components/MessageInput.js" type="text/babel"></script>
+  <script src="./components/ChatHeader.js" type="text/babel"></script>
+  <script src="./components/ContactProfile.js" type="text/babel"></script>
+  <script src="./components/SwipeableChatItem.js" type="text/babel"></script>
+  <script src="./components/ChatsPage.js" type="text/babel"></script>
+  <script src="./components/ChatDetail.js" type="text/babel"></script>
+  <script src="./components/SettingsSection.js" type="text/babel"></script>
+  <script src="./components/SettingsPage.js" type="text/babel"></script>
+  <script src="./components/BottomNavigation.js" type="text/babel"></script>
+  <script src="./components/Login.js" type="text/babel"></script>
+  <script src="./components/App.js" type="text/babel"></script>
+  
+  <!-- Initialize the app -->
+  <script src="./app.js" type="text/babel"></script>
 </body>
 </html>
