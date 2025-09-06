@@ -4,6 +4,15 @@ body {
   transition: background-color 0.3s ease;
 }
 
+/* Keyboard-aware layout */
+.keyboard-aware-container {
+  transition: height 0.3s ease-out;
+}
+
+.keyboard-input-fixed {
+  transition: bottom 0.3s ease-out, position 0.3s ease-out;
+}
+
 .message-bubble {
   max-width: 75%;
   word-wrap: break-word;

@@ -9,6 +9,8 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
   const emojiPickerRef = useRef(null);
   const attachmentsRef = useRef(null);
   const recordInterval = useRef(null);
+  const textareaRef = useRef(null);
+  const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
 
   const showToastMessage = useCallback((msg) => {
     setShowToast({ message: msg, isVisible: true });
@@ -85,7 +87,16 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
   }, []);
 
   return (
-    <div className="bg-white dark:bg-dark-secondary border-t border-gray-200 dark:border-gray-700 p-3 transition-colors duration-300">
+    <div 
+      className="bg-white dark:bg-dark-secondary border-t border-gray-200 dark:border-gray-700 p-3 transition-all duration-300"
+      style={{
+        position: isKeyboardVisible ? 'fixed' : 'relative',
+        bottom: isKeyboardVisible ? `${keyboardHeight}px` : '0',
+        left: isKeyboardVisible ? '0' : 'auto',
+        right: isKeyboardVisible ? '0' : 'auto',
+        zIndex: isKeyboardVisible ? 1000 : 'auto'
+      }}
+    >
       <div className="flex items-center">
         <button 
           className="p-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
@@ -202,6 +213,7 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
           </div>
         )}
         <textarea
+          ref={textareaRef}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
