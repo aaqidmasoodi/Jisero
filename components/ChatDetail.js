@@ -130,14 +130,11 @@ const ChatDetail = memo(({ chat, onBack, onSendMessage, chats, setChats, current
 
   const displayedMessages = showSearch ? filteredMessages : chat.messages;
 
-  // Calculate container height accounting for keyboard
-  const containerStyle = {
-    height: isKeyboardVisible ? `calc(100vh - ${keyboardHeight}px)` : '100vh',
-    transition: 'height 0.3s ease-out'
-  };
-
   return (
-    <div className="flex flex-col" style={containerStyle}>
+    <div className="h-full flex flex-col"
+         style={{
+           minHeight: isKeyboardVisible ? `${window.visualViewport?.height || window.innerHeight}px` : '100vh'
+         }}>
       <ChatHeader 
         chat={chat} 
         onBack={onBack}
@@ -148,7 +145,8 @@ const ChatDetail = memo(({ chat, onBack, onSendMessage, chats, setChats, current
       <div 
         className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
         style={{
-          paddingBottom: isKeyboardVisible ? '80px' : '16px', // Extra space when keyboard is visible
+          // Minimal padding adjustment when keyboard is visible
+          paddingBottom: isKeyboardVisible ? '24px' : '16px',
           transition: 'padding-bottom 0.3s ease-out'
         }}
       >

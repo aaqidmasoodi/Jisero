@@ -5,35 +5,19 @@ const useKeyboardHeight = () => {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
-    // Check if visualViewport is supported
+    // Use visualViewport API to detect keyboard without interfering with browser behavior
     if (!window.visualViewport) {
-      // Fallback for older browsers using window resize
-      const handleResize = () => {
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.clientHeight;
-        const heightDiff = documentHeight - windowHeight;
-        
-        if (heightDiff > 150) { // Assume keyboard if height diff > 150px
-          setKeyboardHeight(heightDiff);
-          setIsKeyboardVisible(true);
-        } else {
-          setKeyboardHeight(0);
-          setIsKeyboardVisible(false);
-        }
-      };
-
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+      return; // Don't use fallback - let browser handle naturally
     }
 
-    // Modern approach using visualViewport API
+    const initialHeight = window.visualViewport.height;
+
     const handleViewportChange = () => {
       const viewport = window.visualViewport;
-      const windowHeight = window.innerHeight;
-      const viewportHeight = viewport.height;
-      const heightDiff = windowHeight - viewportHeight;
+      const currentHeight = viewport.height;
+      const heightDiff = initialHeight - currentHeight;
 
-      if (heightDiff > 150) { // Keyboard is likely visible
+      if (heightDiff > 150) { // Keyboard is visible
         setKeyboardHeight(heightDiff);
         setIsKeyboardVisible(true);
       } else {

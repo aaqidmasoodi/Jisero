@@ -88,13 +88,11 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
 
   return (
     <div 
-      className="bg-white dark:bg-dark-secondary border-t border-gray-200 dark:border-gray-700 p-3 transition-all duration-300"
+      className="bg-white dark:bg-dark-secondary border-t border-gray-200 dark:border-gray-700 p-3 transition-colors duration-300"
       style={{
-        position: isKeyboardVisible ? 'fixed' : 'relative',
-        bottom: isKeyboardVisible ? `${keyboardHeight}px` : '0',
-        left: isKeyboardVisible ? '0' : 'auto',
-        right: isKeyboardVisible ? '0' : 'auto',
-        zIndex: isKeyboardVisible ? 1000 : 'auto'
+        // Only add slight adjustment to prevent overlap, let browser handle positioning
+        marginBottom: isKeyboardVisible ? '8px' : '0px',
+        transition: 'margin-bottom 0.3s ease-out'
       }}
     >
       <div className="flex items-center">
