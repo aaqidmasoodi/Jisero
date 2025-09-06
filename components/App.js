@@ -170,7 +170,7 @@ const App = memo(() => {
       );
       triggerHapticFeedback();
     }, 2000);
-  }, [currentChatId, setChats, triggerHapticFeedback]);
+  }, [currentChatId, triggerHapticFeedback]);
 
   const handleUpdateUser = useCallback((updatedUser) => {
     setUser(updatedUser);

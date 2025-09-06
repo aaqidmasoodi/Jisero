@@ -22,8 +22,15 @@
   <!-- Load data and utilities first -->
   <script src="./data/fakeData.js" type="text/babel"></script>
   <script src="./utils/commonEmojis.js" type="text/babel"></script>
+  <script src="./utils/validation.js" type="text/babel"></script>
+  
+  <!-- Load context and hooks -->
+  <script src="./context/AppContext.js" type="text/babel"></script>
+  <script src="./hooks/useChat.js" type="text/babel"></script>
   
   <!-- Load components in dependency order -->
+  <script src="./components/ErrorBoundary.js" type="text/babel"></script>
+  <script src="./components/LazyImage.js" type="text/babel"></script>
   <script src="./components/Toast.js" type="text/babel"></script>
   <script src="./components/TypingIndicator.js" type="text/babel"></script>
   <script src="./components/Message.js" type="text/babel"></script>

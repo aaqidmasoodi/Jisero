@@ -1,6 +1,6 @@
 const { memo, useState, useRef, useCallback } = React;
 
-const SwipeableChatItem = memo(({ chat, onClick, currentChatId, onSelectChat, onArchive, onDelete, onPin, theme }) => {
+const SwipeableChatItem = memo(({ chat, onClick, currentChatId, onSelectChat, onArchive, onDelete, onPin, onKeyDown, theme }) => {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const [showToast, setShowToast] = useState({ message: '', isVisible: false });
@@ -82,10 +82,11 @@ const SwipeableChatItem = memo(({ chat, onClick, currentChatId, onSelectChat, on
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onKeyDown={onKeyDown}
       style={{ position: 'relative' }}
       role="button"
       tabIndex={0}
-      aria-label={`Chat with ${chat.name}`}
+      aria-label={`Chat with ${chat.name}. ${chat.unreadCount > 0 ? `${chat.unreadCount} unread messages.` : ''}`}
     >
       <div className="swipe-indicator"></div>
       <div 

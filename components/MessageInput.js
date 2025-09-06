@@ -20,11 +20,12 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (inputValue.trim()) {
-        onSendMessage(inputValue);
+      const sanitizedInput = ValidationUtils.sanitizeMessage(inputValue);
+      if (ValidationUtils.isValidMessage(sanitizedInput)) {
+        onSendMessage(sanitizedInput);
         setInputValue('');
       } else {
-        showToastMessage("Please type a message before sending");
+        showToastMessage("Please enter a valid message (1-1000 characters)");
       }
     }
   };
@@ -227,11 +228,12 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
         <button 
           className="p-2 bg-black dark:bg-white text-white dark:text-black rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
           onClick={() => {
-            if (inputValue.trim()) {
-              onSendMessage(inputValue);
+            const sanitizedInput = ValidationUtils.sanitizeMessage(inputValue);
+            if (ValidationUtils.isValidMessage(sanitizedInput)) {
+              onSendMessage(sanitizedInput);
               setInputValue('');
             } else {
-              showToastMessage("Please type a message before sending");
+              showToastMessage("Please enter a valid message (1-1000 characters)");
             }
           }}
           aria-label="Send message"
