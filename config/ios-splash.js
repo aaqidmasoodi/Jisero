@@ -70,6 +70,16 @@ const iosSplashScreens = [
     href: "/splash/2532x1170.png"
   },
   
+  // iPhone 14 Pro / 15 Pro
+  {
+    media: "screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)",
+    href: "/splash/1179x2556.png"
+  },
+  {
+    media: "screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)",
+    href: "/splash/2556x1179.png"
+  },
+  
   // iPhone 12/13/14 Pro Max
   {
     media: "screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)",
