@@ -131,10 +131,7 @@ const ChatDetail = memo(({ chat, onBack, onSendMessage, chats, setChats, current
   const displayedMessages = showSearch ? filteredMessages : chat.messages;
 
   return (
-    <div className="h-full flex flex-col"
-         style={{
-           minHeight: isKeyboardVisible ? `${window.visualViewport?.height || window.innerHeight}px` : '100vh'
-         }}>
+    <div className="h-full flex flex-col overflow-hidden">
       <ChatHeader 
         chat={chat} 
         onBack={onBack}
@@ -142,14 +139,7 @@ const ChatDetail = memo(({ chat, onBack, onSendMessage, chats, setChats, current
         theme={theme}
         onContactPress={handleContactPress}
       />
-      <div 
-        className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-300"
-        style={{
-          // Minimal padding adjustment when keyboard is visible
-          paddingBottom: isKeyboardVisible ? '24px' : '16px',
-          transition: 'padding-bottom 0.3s ease-out'
-        }}
-      >
+      <div className="chat-messages-container bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         {displayedMessages.map((message) => (
           <Message 
             key={message.id} 
@@ -176,14 +166,16 @@ const ChatDetail = memo(({ chat, onBack, onSendMessage, chats, setChats, current
           </button>
         </div>
       )}
-      <MessageInput 
-        onSendMessage={handleSendMessageLocal}
-        inputValue={message}
-        setInputValue={setMessage}
-        theme={theme}
-        onAttachment={handleAttachment}
-        onVoiceRecord={handleVoiceRecord}
-      />
+      <div className="chat-input-container">
+        <MessageInput 
+          onSendMessage={handleSendMessageLocal}
+          inputValue={message}
+          setInputValue={setMessage}
+          theme={theme}
+          onAttachment={handleAttachment}
+          onVoiceRecord={handleVoiceRecord}
+        />
+      </div>
       <div className="toast-container">
         <Toast 
           message={showToast.message} 

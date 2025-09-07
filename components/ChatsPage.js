@@ -82,22 +82,9 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
   }, [onSelectChat, triggerHapticFeedback]);
 
   return (
-    <div 
-      className="h-full flex flex-col"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Pull to refresh indicator */}
-      <div className={`pull-to-refresh ${pullDistance > 30 ? 'show' : ''}`}>
-        {refreshing ? (
-          <div className="refresh-indicator"></div>
-        ) : (
-          <span className="text-gray-500 dark:text-gray-400 text-sm">Pull to refresh</span>
-        )}
-      </div>
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center transition-colors duration-300">
+      <div className="app-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center transition-colors duration-300">
         <h1 className="text-lg font-bold text-black dark:text-white">Chats</h1>
         <div className="ml-auto flex space-x-2">
           <button 
@@ -117,7 +104,37 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
       </div>
       {/* Search Bar */}
       {showSearch && (
-        <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+        <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 fixed top-16 left-0 right-0 z-50">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search chats"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white dark:bg-dark-secondary dark:text-dark-text"
+              aria-label="Search chats"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 dark:text-gray-500 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      )}
+      <div 
+        className="scrollable-content"
+        style={{ paddingTop: showSearch ? '60px' : '0' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Pull to refresh indicator */}
+        <div className={`pull-to-refresh ${pullDistance > 30 ? 'show' : ''}`}>
+          {refreshing ? (
+            <div className="refresh-indicator"></div>
+          ) : (
+            <span className="text-gray-500 dark:text-gray-400 text-sm">Pull to refresh</span>
+          )}
+        </div>
           <div className="relative">
             <input
               type="text"

@@ -59,13 +59,13 @@ const SettingsPage = memo(({ user, onLogout, onUpdateUser, theme, setTheme, onNa
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-dark-bg transition-colors duration-300">
+    <div className="h-full flex flex-col bg-white dark:bg-dark-bg transition-colors duration-300 overflow-hidden">
       {/* Header */}
-      <div className="bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center transition-colors duration-300">
+      <div className="app-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center transition-colors duration-300">
         <h1 className="text-lg font-bold text-black dark:text-white">Settings</h1>
       </div>
       {/* Search Bar */}
-      <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+      <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 fixed top-16 left-0 right-0 z-50">
         <div className="relative">
           <input
             type="text"
@@ -81,7 +81,7 @@ const SettingsPage = memo(({ user, onLogout, onUpdateUser, theme, setTheme, onNa
         </div>
       </div>
       {/* Settings List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="scrollable-content" style={{ paddingTop: '60px' }}>
         {filteredSections.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

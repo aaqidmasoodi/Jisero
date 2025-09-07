@@ -198,7 +198,7 @@ const App = memo(() => {
   const currentChat = chats.find(chat => chat.id === currentChatId);
 
   return (
-    <div className={`h-screen flex flex-col transition-colors duration-300 ${theme === 'dark' ? 'bg-dark-bg text-dark-text' : 'bg-white text-black'}`}>
+    <div className={`h-screen flex flex-col transition-colors duration-300 overflow-hidden ${theme === 'dark' ? 'bg-dark-bg text-dark-text' : 'bg-white text-black'}`}>
       {showSettingsSection && activeSettingsSection ? (
         <div className="slide-enter slide-enter-active h-full w-full">
           <SettingsSection 
@@ -241,11 +241,13 @@ const App = memo(() => {
         />
       )}
       {!currentChatId && !showSettingsSection && (
-        <BottomNavigation 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-          theme={theme}
-        />
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <BottomNavigation 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab}
+            theme={theme}
+          />
+        </div>
       )}
       <div className="toast-container">
         <Toast 
