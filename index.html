@@ -113,12 +113,10 @@
       if (!window.visualViewport) return;
       
       const header = () => document.querySelector('.app-header:not(.chat-header)');
-      const inputContainer = () => document.querySelector('.chat-input-container');
       
       function updateLayout() {
         const vv = window.visualViewport;
         const headerEl = header();
-        const inputEl = inputContainer();
         
         if (headerEl) {
           // Instantly snap header back to top of visual viewport
@@ -127,15 +125,6 @@
           // Re-enable transitions after positioning
           setTimeout(() => {
             headerEl.style.transition = '';
-          }, 0);
-        }
-        
-        if (inputEl) {
-          // Keep input at bottom of visual viewport
-          inputEl.style.transition = 'none';
-          inputEl.style.transform = `translateY(${vv.height + vv.offsetTop - window.innerHeight}px)`;
-          setTimeout(() => {
-            inputEl.style.transition = '';
           }, 0);
         }
       }
