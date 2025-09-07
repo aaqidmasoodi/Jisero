@@ -237,11 +237,21 @@ const MessageInput = memo(({ onSendMessage, inputValue, setInputValue, theme, on
         </button>
         <button 
           className="p-2 bg-black dark:bg-white text-white dark:text-black rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const sanitizedInput = ValidationUtils.sanitizeMessage(inputValue);
             if (ValidationUtils.isValidMessage(sanitizedInput)) {
               onSendMessage(sanitizedInput);
               setInputValue('');
+              
+              // Keep focus on textarea to prevent keyboard from closing
+              if (textareaRef.current) {
+                setTimeout(() => {
+                  textareaRef.current.focus();
+                }, 0);
+              }
             } else {
               showToastMessage("Please enter a valid message (1-1000 characters)");
             }
