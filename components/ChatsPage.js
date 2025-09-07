@@ -82,7 +82,7 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="app-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 pt-4 flex items-center transition-colors duration-300">
+      <div className="app-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 pt-4 flex items-center transition-colors duration-300" style={{ paddingTop: `calc(1rem + ${typeof window !== 'undefined' && window.CSS && window.CSS.env ? 'env(safe-area-inset-top, 0)' : '0px'})` }}>
         <h1 className="text-lg font-bold text-black dark:text-white">Chats</h1>
         <div className="ml-auto flex space-x-2">
           <button 
