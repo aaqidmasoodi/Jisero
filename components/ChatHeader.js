@@ -5,7 +5,7 @@ const ChatHeader = memo(({ chat, onBack, onMoreOptions, theme, onContactPress })
   const [showSearch, setShowSearch] = useState(false);
 
   return (
-    <div className="app-header chat-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center transition-colors duration-300">
+    <div className="app-header chat-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 pt-4 flex items-center transition-colors duration-300">
       <button 
         onClick={onBack}
         className="p-2 mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

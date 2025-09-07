@@ -61,7 +61,7 @@ const SettingsPage = memo(({ user, onLogout, onUpdateUser, theme, setTheme, onNa
   return (
     <div className="h-full flex flex-col bg-white dark:bg-dark-bg transition-colors duration-300 overflow-hidden">
       {/* Header */}
-      <div className="app-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center transition-colors duration-300">
+      <div className="app-header bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 px-4 pt-4 flex items-center transition-colors duration-300">
         <h1 className="text-lg font-bold text-black dark:text-white">Settings</h1>
       </div>
       {/* Search Bar */}
