@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jisero-v1.0.6';
+const CACHE_NAME = 'jisero-v1.0.7';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -9,6 +9,8 @@ const urlsToCache = [
   '/data/fakeData.js',
   '/utils/commonEmojis.js',
   '/utils/validation.js',
+  '/utils/notifications.js',
+  '/utils/storage.js',
   '/context/AppContext.js',
   '/hooks/useChat.js',
   '/hooks/useKeyboardHeight.js',
@@ -28,11 +30,7 @@ const urlsToCache = [
   '/components/BottomNavigation.js',
   '/components/Login.js',
   '/components/App.js',
-  // External CDN resources
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-  'https://unpkg.com/@babel/standalone/babel.min.js',
-  'https://cdn.tailwindcss.com'
+  '/config/ios-splash.js'
 ];
 
 // Install event - cache resources
@@ -69,6 +67,12 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  // Skip caching for external CDN resources to avoid CORS issues
+  if (event.request.url.includes('cdn.tailwindcss.com') || 
+      event.request.url.includes('unpkg.com')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
