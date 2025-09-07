@@ -121,19 +121,32 @@
         const inputEl = inputContainer();
         
         if (headerEl) {
-          // Keep header at top of visual viewport
+          // Instantly snap header back to top of visual viewport
+          headerEl.style.transition = 'none';
           headerEl.style.transform = `translateY(${vv.offsetTop}px)`;
+          // Re-enable transitions after positioning
+          setTimeout(() => {
+            headerEl.style.transition = '';
+          }, 0);
         }
         
         if (inputEl) {
           // Keep input at bottom of visual viewport
+          inputEl.style.transition = 'none';
           inputEl.style.transform = `translateY(${vv.height + vv.offsetTop - window.innerHeight}px)`;
+          setTimeout(() => {
+            inputEl.style.transition = '';
+          }, 0);
         }
       }
       
       if (window.visualViewport) {
         visualViewport.addEventListener('resize', updateLayout);
         visualViewport.addEventListener('scroll', updateLayout);
+        
+        // Also listen for focus events to catch keyboard opening
+        document.addEventListener('focusin', updateLayout);
+        document.addEventListener('focusout', updateLayout);
       }
     }
     

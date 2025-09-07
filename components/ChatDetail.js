@@ -139,20 +139,22 @@ const ChatDetail = memo(({ chat, onBack, onSendMessage, chats, setChats, current
         theme={theme}
         onContactPress={handleContactPress}
       />
-      <div className="chat-messages-container bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-        {displayedMessages.map((message) => (
-          <Message 
-            key={message.id} 
-            message={message} 
-            isSelected={selectedMessages.includes(message.id)}
-            onSelect={() => toggleMessageSelection(message.id)}
-            onLongPress={() => toggleMessageSelection(message.id)}
-            onReact={(emoji) => handleReact(message.id, emoji)}
-            theme={theme}
-          />
-        ))}
-        {showTyping && <TypingIndicator theme={theme} />}
-        <div ref={messagesEndRef} />
+      <div className="app-content">
+        <div className="chat-messages-container bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+          {displayedMessages.map((message) => (
+            <Message 
+              key={message.id} 
+              message={message} 
+              isSelected={selectedMessages.includes(message.id)}
+              onSelect={() => toggleMessageSelection(message.id)}
+              onLongPress={() => toggleMessageSelection(message.id)}
+              onReact={(emoji) => handleReact(message.id, emoji)}
+              theme={theme}
+            />
+          ))}
+          {showTyping && <TypingIndicator theme={theme} />}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
       {selectedMessages.length > 0 && (
         <div className="bg-black dark:bg-white text-white dark:text-black p-2 text-center text-sm font-medium">
