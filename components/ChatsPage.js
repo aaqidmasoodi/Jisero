@@ -49,29 +49,28 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
   }, []);
 
   const handleTouchMove = useCallback((e) => {
+    if (touchStartY.current === 0) return;
+    
     const currentY = e.touches[0].clientY;
     const distance = currentY - touchStartY.current;
+    
     if (distance > 0 && window.scrollY === 0) {
-      setPullDistance(distance);
-      if (distance > 60) {
-        setRefreshing(true);
-      }
+      e.preventDefault();
+      setPullDistance(Math.min(distance, 80));
     }
   }, []);
 
   const handleTouchEnd = useCallback(() => {
-    if (pullDistance > 60) {
-      // Simulate refresh
+    if (pullDistance > 50) {
+      setRefreshing(true);
       setTimeout(() => {
         setRefreshing(false);
-        setPullDistance(0);
-        showToastMessage("Chats updated!");
-        triggerHapticFeedback();
+        showToastMessage('Chats refreshed!');
       }, 1500);
-    } else {
-      setPullDistance(0);
     }
-  }, [pullDistance, showToastMessage, triggerHapticFeedback]);
+    setPullDistance(0);
+    touchStartY.current = 0;
+  }, [pullDistance, showToastMessage]);
 
   const handleKeyDown = useCallback((e, chat) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -102,6 +101,7 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
           </button>
         </div>
       </div>
+      
       {/* Search Bar */}
       {showSearch && (
         <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 fixed left-0 right-0 z-50" style={{ top: `calc(64px + ${typeof window !== 'undefined' && window.CSS && window.CSS.env ? 'env(safe-area-inset-top, 0)' : '0px'})` }}>
@@ -120,6 +120,7 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
           </div>
         </div>
       )}
+      
       <div 
         className="scrollable-content"
         style={{ paddingTop: showSearch ? '60px' : '0' }}
@@ -135,68 +136,57 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
             <span className="text-gray-500 dark:text-gray-400 text-sm">Pull to refresh</span>
           )}
         </div>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search chats"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white dark:bg-dark-secondary dark:text-dark-text"
-              aria-label="Search chats"
-            />
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 dark:text-gray-500 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        
+        {/* Pinned Chats Carousel */}
+        {pinnedChats.length > 0 && (
+          <div className="pinned-carousel">
+            {pinnedChats.map(chat => (
+              <div 
+                key={chat.id} 
+                className="pinned-chat"
+                onClick={() => onSelectChat(chat.id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Go to chat with ${chat.name}`}
+              >
+                <img src={chat.avatar} alt={chat.name} />
+                {chat.unreadCount > 0 && (
+                  <div className="pinned-badge">
+                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      )}
-      {/* Pinned Chats Carousel */}
-      {pinnedChats.length > 0 && (
-        <div className="pinned-carousel">
-          {pinnedChats.map(chat => (
-            <div 
-              key={chat.id} 
-              className="pinned-chat"
-              onClick={() => onSelectChat(chat.id)}
-              role="button"
-              tabIndex={0}
-              aria-label={`Go to chat with ${chat.name}`}
-            >
-              <img src={chat.avatar} alt={chat.name} />
-              {chat.unreadCount > 0 && (
-                <div className="pinned-badge">
-                  {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-dark-bg transition-colors duration-300">
-        {filteredChats.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <p>No chats found</p>
-          </div>
-        ) : (
-          filteredChats.map(chat => (
-            <SwipeableChatItem 
-              key={chat.id} 
-              chat={chat} 
-              currentChatId={currentChatId}
-              onSelectChat={onSelectChat}
-              onArchive={onArchive}
-              onDelete={onDelete}
-              onPin={onPin}
-              onKeyDown={(e) => handleKeyDown(e, chat)}
-              theme={theme}
-            />
-          ))
         )}
+        
+        {/* Chat List */}
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-dark-bg transition-colors duration-300">
+          {filteredChats.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              <p>No chats found</p>
+            </div>
+          ) : (
+            filteredChats.map(chat => (
+              <SwipeableChatItem 
+                key={chat.id} 
+                chat={chat} 
+                currentChatId={currentChatId}
+                onSelectChat={onSelectChat}
+                onArchive={onArchive}
+                onDelete={onDelete}
+                onPin={onPin}
+                onKeyDown={(e) => handleKeyDown(e, chat)}
+                theme={theme}
+              />
+            ))
+          )}
+        </div>
       </div>
+      
       {/* Contact Profile Modal */}
       {showContactProfile && selectedContact && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -209,6 +199,7 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
           </div>
         </div>
       )}
+      
       <div className="toast-container">
         <Toast 
           message={showToast.message} 
