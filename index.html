@@ -106,6 +106,45 @@
     }, 3000);
   </script>
   
+  <!-- iOS Safari keyboard fix -->
+  <script>
+    // Fix for iOS Safari keyboard pushing content up
+    function setupIOSKeyboardFix() {
+      if (!window.visualViewport) return;
+      
+      const header = () => document.querySelector('.app-header');
+      const inputContainer = () => document.querySelector('.chat-input-container');
+      
+      function updateLayout() {
+        const vv = window.visualViewport;
+        const headerEl = header();
+        const inputEl = inputContainer();
+        
+        if (headerEl) {
+          // Keep header at top of visual viewport
+          headerEl.style.transform = `translateY(${vv.offsetTop}px)`;
+        }
+        
+        if (inputEl) {
+          // Keep input at bottom of visual viewport
+          inputEl.style.transform = `translateY(${vv.height + vv.offsetTop - window.innerHeight}px)`;
+        }
+      }
+      
+      if (window.visualViewport) {
+        visualViewport.addEventListener('resize', updateLayout);
+        visualViewport.addEventListener('scroll', updateLayout);
+      }
+    }
+    
+    // Initialize after DOM loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupIOSKeyboardFix);
+    } else {
+      setupIOSKeyboardFix();
+    }
+  </script>
+
   <!-- PWA Service Worker Registration -->
   <script>
     // Register service worker

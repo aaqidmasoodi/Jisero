@@ -4,28 +4,21 @@ body {
   transition: background-color 0.3s ease;
   overflow: hidden;
   height: 100vh;
-  position: fixed;
-  width: 100%;
-  top: 0;
-  left: 0;
+  height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 html {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
-  position: fixed;
-  width: 100%;
 }
 
 #root {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: fixed;
-  width: 100%;
-  top: 0;
-  left: 0;
 }
 
 /* Fixed header styles */
@@ -39,6 +32,7 @@ html {
   border-bottom: 1px solid #e5e5e5;
   padding-left: env(safe-area-inset-left, 0);
   padding-right: env(safe-area-inset-right, 0);
+  height: 64px;
 }
 
 .dark .app-header {
@@ -51,19 +45,15 @@ html {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: 64px; /* Just header height */
 }
 
 .scrollable-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)); /* Space for bottom navigation + safe area */
+  padding-top: calc(64px + env(safe-area-inset-top, 0));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
   -webkit-overflow-scrolling: touch;
-}
-
-.scrollable-content.no-nav {
-  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .chat-messages-container {
@@ -71,7 +61,6 @@ html {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px;
-  padding-top: 80px; /* Header + small buffer */
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
   -webkit-overflow-scrolling: touch;
 }

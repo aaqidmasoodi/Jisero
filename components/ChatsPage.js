@@ -55,7 +55,6 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
     const distance = currentY - touchStartY.current;
     
     if (distance > 0 && window.scrollY === 0) {
-      e.preventDefault();
       setPullDistance(Math.min(distance, 80));
     }
   }, []);
@@ -121,13 +120,14 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
         </div>
       )}
       
-      <div 
-        className="scrollable-content"
-        style={{ paddingTop: showSearch ? '60px' : '0' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="app-content">
+        <div 
+          className="scrollable-content"
+          style={{ paddingTop: showSearch ? '60px' : '0' }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
         {/* Pull to refresh indicator */}
         <div className={`pull-to-refresh ${pullDistance > 30 ? 'show' : ''}`}>
           {refreshing ? (
@@ -185,6 +185,7 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
             ))
           )}
         </div>
+      </div>
       </div>
       
       {/* Contact Profile Modal */}
