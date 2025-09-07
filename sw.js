@@ -1,4 +1,30 @@
-const CACHE_NAME = 'jisero-v1.2.1';
+const CACHE_NAME = 'jisero-v1.2.3';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/styles/global.css',
+  '/components/App.js',
+  '/components/ChatsPage.js',
+  '/components/ChatDetail.js',
+  '/components/ChatHeader.js',
+  '/components/Message.js',
+  '/components/MessageInput.js',
+  '/components/SwipeableChatItem.js',
+  '/components/ContactProfile.js',
+  '/components/Toast.js',
+  '/components/TypingIndicator.js',
+  '/utils/ValidationUtils.js',
+  '/utils/KeyboardUtils.js',
+  '/data/mockData.js',
+  '/manifest.json'
+];
+
+// Handle skipWaiting message
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
 const urlsToCache = [
   '/',
   '/index.html',
