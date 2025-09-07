@@ -2,8 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jisero</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Jisero - Chat App</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="A modern chat application with real-time messaging">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Jisero">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-tap-highlight" content="no">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+  
+  <!-- iOS Splash Screens (loaded dynamically) -->
+  <script src="./config/ios-splash.js"></script>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192x192.png">
+  <link rel="shortcut icon" href="/icons/icon-192x192.png">
+  
   <!-- React via CDN (Production) -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -19,10 +44,26 @@
 <body class="bg-white text-black transition-colors duration-300">
   <div id="root"></div>
   
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner" style="display: none;" class="fixed bottom-0 left-0 right-0 bg-black text-white p-4 z-50">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="font-bold">Install Jisero</h3>
+        <p class="text-sm">Get the full app experience</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="pwa-install-btn" class="bg-white text-black px-4 py-2 rounded">Install</button>
+        <button id="pwa-dismiss-btn" class="text-white px-4 py-2">Later</button>
+      </div>
+    </div>
+  </div>
+  
   <!-- Load data and utilities first -->
   <script src="./data/fakeData.js" type="text/babel"></script>
   <script src="./utils/commonEmojis.js" type="text/babel"></script>
   <script src="./utils/validation.js" type="text/babel"></script>
+  <script src="./utils/notifications.js" type="text/babel"></script>
+  <script src="./utils/storage.js" type="text/babel"></script>
   
   <!-- Load context and hooks -->
   <script src="./context/AppContext.js" type="text/babel"></script>
@@ -49,5 +90,53 @@
   
   <!-- Initialize the app -->
   <script src="./app.js" type="text/babel"></script>
+  
+  <!-- PWA Service Worker Registration -->
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    const installBanner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('pwa-install-btn');
+    const dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBanner.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        deferredPrompt = null;
+        installBanner.style.display = 'none';
+      }
+    });
+
+    dismissBtn.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+    });
+
+    // Hide install banner when app is installed
+    window.addEventListener('appinstalled', () => {
+      installBanner.style.display = 'none';
+      console.log('PWA was installed');
+    });
+  </script>
 </body>
 </html>
