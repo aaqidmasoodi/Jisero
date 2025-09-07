@@ -101,6 +101,9 @@ const ChatsPage = memo(({ chats, onSelectChat, currentChatId, onArchive, onDelet
         </div>
       </div>
       
+      {/* Header Spacer - accounts for fixed header */}
+      <div style={{ height: `calc(64px + ${typeof window !== 'undefined' && window.CSS && window.CSS.env ? 'env(safe-area-inset-top, 0)' : '0px'})` }}></div>
+      
       {/* Search Bar */}
       {showSearch && (
         <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 fixed left-0 right-0 z-50" style={{ top: `calc(64px + ${typeof window !== 'undefined' && window.CSS && window.CSS.env ? 'env(safe-area-inset-top, 0)' : '0px'})` }}>

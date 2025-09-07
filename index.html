@@ -112,7 +112,7 @@
     function setupIOSKeyboardFix() {
       if (!window.visualViewport) return;
       
-      const header = () => document.querySelector('.app-header');
+      const header = () => document.querySelector('.app-header:not(.chat-header)');
       const inputContainer = () => document.querySelector('.chat-input-container');
       
       function updateLayout() {
