@@ -113,31 +113,31 @@
       const header = () => document.querySelector(".app-header:not(.chat-header)");
       const chatHeader = () => document.querySelector(".chat-header");
 
-      window.visualViewport.addEventListener("resize", () => {
-        const headerEl = header();
-        if (headerEl) {
-          // Keep header pinned to the very top of the *visible* screen
-          headerEl.style.top = window.visualViewport.offsetTop + "px";
-        }
-        
-        // Aggressively lock chat header in place
+      function lockChatHeader() {
         const chatHeaderEl = chatHeader();
         if (chatHeaderEl) {
+          chatHeaderEl.style.transition = 'none';
           chatHeaderEl.style.position = 'fixed';
           chatHeaderEl.style.top = window.visualViewport.offsetTop + 'px';
           chatHeaderEl.style.left = '0';
           chatHeaderEl.style.right = '0';
           chatHeaderEl.style.zIndex = '1001';
         }
+      }
+
+      window.visualViewport.addEventListener("resize", () => {
+        const headerEl = header();
+        if (headerEl) {
+          headerEl.style.top = window.visualViewport.offsetTop + "px";
+        }
+        lockChatHeader();
       });
       
-      // Also lock on scroll
-      window.visualViewport.addEventListener("scroll", () => {
-        const chatHeaderEl = chatHeader();
-        if (chatHeaderEl) {
-          chatHeaderEl.style.top = window.visualViewport.offsetTop + 'px';
-        }
-      });
+      window.visualViewport.addEventListener("scroll", lockChatHeader);
+      
+      // Listen for focus events to catch keyboard opening instantly
+      document.addEventListener('focusin', lockChatHeader);
+      document.addEventListener('focusout', lockChatHeader);
     }
   </script>
 
