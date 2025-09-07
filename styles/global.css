@@ -31,13 +31,12 @@ html {
 /* Fixed header styles */
 .app-header {
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top, 0);
   left: 0;
   right: 0;
   z-index: 100;
   background: white;
   border-bottom: 1px solid #e5e5e5;
-  padding-top: env(safe-area-inset-top, 20px);
   padding-left: env(safe-area-inset-left, 0);
   padding-right: env(safe-area-inset-right, 0);
 }
@@ -52,7 +51,7 @@ html {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: calc(64px + env(safe-area-inset-top, 20px)); /* Header height + safe area */
+  padding-top: calc(64px + env(safe-area-inset-top, 0)); /* Header height + safe area */
 }
 
 .scrollable-content {
@@ -72,6 +71,7 @@ html {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px;
+  padding-top: calc(64px + env(safe-area-inset-top, 0));
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)); /* Space for input + safe area */
   -webkit-overflow-scrolling: touch;
 }

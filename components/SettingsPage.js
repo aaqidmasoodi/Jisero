@@ -65,7 +65,7 @@ const SettingsPage = memo(({ user, onLogout, onUpdateUser, theme, setTheme, onNa
         <h1 className="text-lg font-bold text-black dark:text-white">Settings</h1>
       </div>
       {/* Search Bar */}
-      <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 fixed top-16 left-0 right-0 z-50">
+      <div className="px-4 py-3 bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 fixed left-0 right-0 z-50" style={{ top: `calc(64px + ${typeof window !== 'undefined' && window.CSS && window.CSS.env ? 'env(safe-area-inset-top, 0)' : '0px'})` }}>
         <div className="relative">
           <input
             type="text"
