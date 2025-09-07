@@ -51,7 +51,7 @@ html {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: calc(64px + env(safe-area-inset-top, 0)); /* Header height + safe area */
+  padding-top: 64px; /* Just header height */
 }
 
 .scrollable-content {
@@ -71,8 +71,8 @@ html {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px;
-  padding-top: calc(64px + env(safe-area-inset-top, 0));
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)); /* Space for input + safe area */
+  padding-top: 80px; /* Header + small buffer */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0));
   -webkit-overflow-scrolling: touch;
 }
 
