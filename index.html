@@ -108,42 +108,17 @@
   
   <!-- iOS Safari keyboard fix -->
   <script>
-    // Fix for iOS Safari keyboard pushing content up
-    function setupIOSKeyboardFix() {
-      if (!window.visualViewport) return;
-      
-      const header = () => document.querySelector('.app-header:not(.chat-header)');
-      
-      function updateLayout() {
-        const vv = window.visualViewport;
+    // Fix for iOS Safari keyboard pushing header up
+    if (window.visualViewport) {
+      const header = () => document.querySelector(".app-header:not(.chat-header)");
+
+      window.visualViewport.addEventListener("resize", () => {
         const headerEl = header();
-        
         if (headerEl) {
-          // Instantly snap header back to top of visual viewport
-          headerEl.style.transition = 'none';
-          headerEl.style.transform = `translateY(${vv.offsetTop}px)`;
-          // Re-enable transitions after positioning
-          setTimeout(() => {
-            headerEl.style.transition = '';
-          }, 0);
+          // Keep header pinned to the very top of the *visible* screen
+          headerEl.style.top = window.visualViewport.offsetTop + "px";
         }
-      }
-      
-      if (window.visualViewport) {
-        visualViewport.addEventListener('resize', updateLayout);
-        visualViewport.addEventListener('scroll', updateLayout);
-        
-        // Also listen for focus events to catch keyboard opening
-        document.addEventListener('focusin', updateLayout);
-        document.addEventListener('focusout', updateLayout);
-      }
-    }
-    
-    // Initialize after DOM loads
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setupIOSKeyboardFix);
-    } else {
-      setupIOSKeyboardFix();
+      });
     }
   </script>
 
