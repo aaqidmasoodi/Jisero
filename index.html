@@ -91,6 +91,21 @@
   <!-- Initialize the app -->
   <script src="./app.js" type="text/babel"></script>
   
+  <!-- Debug logging -->
+  <script>
+    window.addEventListener('error', (e) => {
+      console.error('JavaScript Error:', e.error);
+      document.body.innerHTML = '<div style="padding: 20px; color: red;">Error: ' + e.message + '</div>';
+    });
+    
+    // Check if React loaded
+    setTimeout(() => {
+      if (!window.React) {
+        document.body.innerHTML = '<div style="padding: 20px; color: red;">React failed to load</div>';
+      }
+    }, 3000);
+  </script>
+  
   <!-- PWA Service Worker Registration -->
   <script>
     // Register service worker
